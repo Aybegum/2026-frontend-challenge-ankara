@@ -6,14 +6,36 @@
 
 An investigation dashboard built for the "Missing Podo: The Ankara Case" challenge. It fetches live data from five Jotform endpoints, merges and normalizes related records, and presents a coherent **3-panel investigation workspace** designed to answer one question: **Where is Podo, and who is responsible?**
 
-## How to Run
+## Getting Started / Başlangıç
+
+### How to Run (Nasıl Çalıştırılır)
+To run the investigation dashboard locally:
 
 ```bash
+# 1. Install dependencies / Bağımlılıkları yükleyin
 npm install
+
+# 2. Start the Vite dev server / Geliştirme sunucusunu başlatın
 npm run dev
 ```
 
 Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+### Testing & Validation (Nasıl Test Edilir)
+
+This project ensures high data integrity and reliability through strict TypeScript types and comprehensive manual UI verification:
+
+```bash
+# Catch type errors and verify build integrity across all files
+npm run build
+```
+
+**Key Testing Scenarios / Önemli Test Senaryoları:**
+1. **Theme Switching:** Use the ☀️/🌙 icon in the header. Verify the UI and the CartoDB map tiles instantly switch between Light and Dark mode.
+2. **Search Normalization:** Type "Kagan" in the suspect search. Ensure Turkish character variants (Kağan / Kagan) are merged into a single profile.
+3. **Map Interaction:** Click source toggles under the map (e.g., Check-ins). Verify markers filter out and the dashed route line recalculates dynamically.
+4. **Data Grid Sorting:** Click "Evidence Records" in the top navigation. Test filtering by tabs and clicking table headers to sort by Date or Person.
+5. **Prime Suspect System:** Select different people from the left sidebar and watch the "Prime Suspect" insight card highlight the person with the most critical evidence.
 
 ## Features
 
