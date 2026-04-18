@@ -2,6 +2,7 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useMemo } from 'react';
+import { useTheme } from '../contexts/ThemeContext';
 import type { TimelineEvent } from '../pages/Dashboard';
 
 // ── Fix leaflet default icon CRA/Vite bug ──
@@ -85,6 +86,8 @@ function getCoords(loc: string | undefined, id: string): [number, number] {
 
 // ── Component ──
 export function MapViewer({ events }: { events: TimelineEvent[] }) {
+  const { theme } = useTheme();
+
   const points = useMemo(() =>
     events.map(e => ({
       ...e,
@@ -108,7 +111,10 @@ export function MapViewer({ events }: { events: TimelineEvent[] }) {
       >
         <TileLayer
           attribution='&copy; <a href="https://carto.com/">CartoDB</a>'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          url={theme === 'light' 
+            ? "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+            : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          }
         />
 
         {points.map((p, i) => (
@@ -137,9 +143,9 @@ export function MapViewer({ events }: { events: TimelineEvent[] }) {
         {polylineCoords.length > 1 && (
           <Polyline
             positions={polylineCoords}
-            color="#f5a623"
-            weight={2}
-            opacity={0.5}
+            color={theme === 'light' ? '#b45309' : '#f5a623'}
+            weight={theme === 'light' ? 3 : 2}
+            opacity={theme === 'light' ? 0.8 : 0.5}
             dashArray="6 8"
           />
         )}

@@ -175,23 +175,45 @@ const TYPE_META: Record<string, { label: string; color: string; icon: string }> 
   tips:      { label: 'Tip',       color: 'var(--clr-tips)',      icon: '🕵️' },
 };
 
-function PodoPrediction({ data }: { data: AllData }) {
-  const pred = useMemo(() => whereIsPodo(data), [data]);
-  if (!pred) return null;
-
-  const confColor = pred.confidence === 'HIGH' ? 'var(--clr-success)' : pred.confidence === 'MEDIUM' ? 'var(--clr-accent)' : 'var(--clr-text-muted)';
+function InvestigationInsights({ data, suspects, onSelectSuspect }: { data: AllData, suspects: Suspect[], onSelectSuspect: (s: string) => void }) {
+  const podoLoc = useMemo(() => whereIsPodo(data), [data]);
+  const primeSuspect = useMemo(() => {
+    return suspects.find(s => normalizeString(s.name) !== 'podo');
+  }, [suspects]);
 
   return (
-    <div className="podo-prediction">
-      <div className="podo-prediction__icon">🐾</div>
-      <div className="podo-prediction__body">
-        <span className="podo-prediction__label">Last Known Location</span>
-        <span className="podo-prediction__location">{pred.location}</span>
-        <span className="podo-prediction__detail">{pred.lastSeen} · {pred.reason}</span>
-      </div>
-      <div className="podo-prediction__confidence" style={{ color: confColor, borderColor: confColor }}>
-        {pred.confidence}
-      </div>
+    <div className="insights-panel flex">
+      {podoLoc && (
+        <div className="insight-card">
+          <div className="insight-card__icon">🐾</div>
+          <div className="insight-card__body">
+            <span className="insight-card__label">Last Known Location</span>
+            <span className="insight-card__primary">{podoLoc.location}</span>
+            <span className="insight-card__detail truncate" title={`${podoLoc.lastSeen} · ${podoLoc.reason}`}>
+              {podoLoc.lastSeen} · {podoLoc.reason}
+            </span>
+          </div>
+          <div className="insight-card__badge" style={{ color: podoLoc.confidence === 'HIGH' ? 'var(--clr-success)' : 'var(--clr-accent)', borderColor: 'currentColor' }}>
+            {podoLoc.confidence}
+          </div>
+        </div>
+      )}
+
+      {primeSuspect && (
+        <div className="insight-card insight-card--interactive" onClick={() => onSelectSuspect(primeSuspect.rawName)}>
+          <div className="insight-card__icon">🕵️</div>
+          <div className="insight-card__body">
+            <span className="insight-card__label text-danger">Prime Suspect</span>
+            <span className="insight-card__primary">{primeSuspect.name}</span>
+            <span className="insight-card__detail truncate" title={`Highest suspicion score (${primeSuspect.score}pt) across reports.`}>
+              Highest suspicion score ({primeSuspect.score}pt) across reports.
+            </span>
+          </div>
+          <div className="insight-card__badge" style={{ color: 'var(--clr-danger)', borderColor: 'currentColor' }}>
+            #{suspects.indexOf(primeSuspect) + 1}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -313,7 +335,7 @@ export function Dashboard() {
 
       {/* ── CENTER: Map + Prediction ── */}
       <section className="map-panel">
-        <PodoPrediction data={data} />
+        <InvestigationInsights data={data} suspects={suspects} onSelectSuspect={setSelectedPerson} />
 
         <div className="map-panel__map">
           <MapViewer events={displayTimeline} />

@@ -83,6 +83,42 @@
   --content-max-w: 1400px;
 }
 
+/* Light Theme Variables */
+:root.theme-light {
+  --clr-bg-primary:    #f8fafc;
+  --clr-bg-secondary:  #f1f5f9;
+  --clr-bg-card:       #ffffff;
+  --clr-bg-elevated:   #e2e8f0;
+
+  --clr-border:        rgba(15, 23, 42, 0.1);
+  --clr-border-hover:  rgba(15, 23, 42, 0.2);
+
+  --clr-accent:        #d97706;
+  --clr-accent-dim:    rgba(217, 119, 6, 0.1);
+  --clr-accent-hover:  #b45309;
+
+  --clr-danger:        #dc2626;
+  --clr-danger-dim:    rgba(220, 38, 38, 0.1);
+
+  --clr-success:       #059669;
+  --clr-success-dim:   rgba(5, 150, 105, 0.1);
+
+  --clr-text-primary:  #111827;
+  --clr-text-secondary: #4b5563;
+  --clr-text-muted:    #6b7280;
+
+  --clr-checkins:      #2563eb;
+  --clr-messages:      #7c3aed;
+  --clr-sightings:     #059669;
+  --clr-notes:         #d97706;
+  --clr-tips:          #dc2626;
+  
+  --shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md:  0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg:  0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+
 /* ============================================================
    Reset & Base
    ============================================================ */
@@ -169,7 +205,7 @@ code, pre {
   flex: 1;
   padding: 0;
   width: 100%;
-  overflow: hidden;
+  min-height: 0;
 }
 
 /* ============================================================
@@ -315,10 +351,14 @@ code, pre {
    Glassmorphism helper
    ============================================================ */
 .glass {
-  background: rgba(21 24 36 / 0.6);
+  background: rgba(21, 24, 36, 0.6);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--clr-border);
+  border-bottom: 1px solid var(--clr-border);
+}
+
+:root.theme-light .glass {
+  background: rgba(255, 255, 255, 0.85);
 }
 
 /* ============================================================

@@ -2,26 +2,31 @@ import { Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Header } from './components/Layout/Header';
 import { Dashboard } from './pages/Dashboard';
+import { Evidence } from './pages/Evidence';
+import { ThemeProvider } from './contexts/ThemeContext';
 import './styles/global.css';
 
 function App() {
   return (
-    <BrowserRouter>
-      <div className="layout-root">
-        <Header />
+    <ThemeProvider>
+      <BrowserRouter>
+        <div className="layout-root">
+          <Header />
 
-        <div className="layout-main">
-          <main className="layout-content" id="main-content">
-            <Suspense fallback={<PageSkeleton />}>
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
-          </main>
+          <div className="layout-main">
+            <main className="layout-content" id="main-content">
+              <Suspense fallback={<PageSkeleton />}>
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/evidence" element={<Evidence />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
+            </main>
+          </div>
         </div>
-      </div>
-    </BrowserRouter>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }
 

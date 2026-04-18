@@ -1,0 +1,202 @@
+/* ============================================================
+   Evidence Records Page
+   ============================================================ */
+
+.evidence-page {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--header-height));
+  overflow: hidden;
+  padding: var(--space-5) var(--space-6);
+  gap: var(--space-4);
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ── Toolbar ── */
+.evidence-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+  flex-shrink: 0;
+}
+
+.evidence-toolbar__left {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.evidence-toolbar__title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.evidence-toolbar__count {
+  font-size: 0.8rem;
+}
+
+.evidence-search {
+  width: 340px;
+}
+
+/* ── Tabs ── */
+.evidence-tabs {
+  display: flex;
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--clr-border);
+  padding-bottom: var(--space-3);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.evidence-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--clr-border);
+  background: transparent;
+  color: var(--clr-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.evidence-tab:hover {
+  background: var(--clr-bg-elevated);
+  color: var(--clr-text-primary);
+}
+
+.evidence-tab--active {
+  background: var(--clr-bg-elevated);
+  border-color: var(--clr-accent);
+  color: var(--clr-accent);
+}
+
+.evidence-tab__count {
+  background: var(--clr-bg-primary);
+  border-radius: var(--radius-full);
+  padding: 0 6px;
+  font-size: 0.68rem;
+  font-family: var(--font-mono);
+  color: var(--clr-text-muted);
+}
+
+.evidence-tab--active .evidence-tab__count {
+  background: var(--clr-accent-dim);
+  color: var(--clr-accent);
+}
+
+/* ── Table Wrapper ── */
+.evidence-table-wrap {
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-lg);
+  background: var(--clr-bg-secondary);
+}
+
+/* ── Table ── */
+.evidence-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.evidence-th {
+  position: sticky;
+  top: 0;
+  background: var(--clr-bg-elevated);
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--clr-text-muted);
+  border-bottom: 1px solid var(--clr-border);
+  white-space: nowrap;
+  user-select: none;
+  z-index: 2;
+}
+
+.evidence-th--sortable {
+  cursor: pointer;
+}
+
+.evidence-th--sortable:hover {
+  color: var(--clr-text-primary);
+}
+
+.evidence-th--sorted {
+  color: var(--clr-accent);
+}
+
+.evidence-th--type { width: 110px; }
+
+.evidence-row {
+  border-bottom: 1px solid var(--clr-border);
+  transition: background var(--transition-fast);
+}
+
+.evidence-row:last-child { border-bottom: none; }
+
+.evidence-row:hover {
+  background: var(--clr-bg-elevated);
+}
+
+.evidence-td {
+  padding: var(--space-3) var(--space-4);
+  vertical-align: middle;
+  color: var(--clr-text-primary);
+}
+
+.evidence-td--mono {
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  color: var(--clr-text-muted);
+}
+
+.evidence-td--person {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.evidence-td--desc {
+  color: var(--clr-text-secondary);
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── States ── */
+.evidence-loading {
+  padding: var(--space-5);
+}
+
+.evidence-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-16);
+  color: var(--clr-text-muted);
+  text-align: center;
+}
+
+.evidence-empty span {
+  font-size: 2.5rem;
+  opacity: 0.3;
+}
+
+.evidence-empty p {
+  font-size: 0.875rem;
+}
