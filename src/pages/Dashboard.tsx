@@ -1,224 +1,396 @@
+import { useState, useMemo } from 'react';
 import { useAllData } from '../hooks/useAllData';
 import type { AllData } from '../types';
+import { MapViewer } from '../components/MapViewer';
 import './Dashboard.css';
 
-// ── helpers ────────────────────────────────────────────────────────────────
+// ── Types ──────────────────────────────────────────────────────────────────
 
-function latestDate(dates: string[]): string {
-  if (dates.length === 0) return '—';
-  const sorted = [...dates].sort();
-  return new Date(sorted[sorted.length - 1]).toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-// Suspicion score: sources that mention "podo" most recently get higher weight
-function suspicionScore(data: AllData): { name: string; score: number }[] {
-  const names = new Map<string, number>();
-
-  const bump = (name: string, pts: number) => {
-    if (!name || name === 'Unknown') return;
-    const key = name.trim().toLowerCase();
-    names.set(key, (names.get(key) ?? 0) + pts);
-  };
-
-  data.checkins.forEach(c => bump(c.personName, 1));
-  data.messages.forEach(m => { bump(m.senderName, 1); bump(m.receiverName, 1); });
-  data.sightings.forEach(s => { bump(s.reporterName, 1); bump(s.seenPersonName, 2); bump(s.seenWith ?? '', 1); });
-  data.personalNotes.forEach(n => bump(n.authorName, 1));
-
-  return [...names.entries()]
-    .map(([name, score]) => ({ name, score }))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 5);
-}
-
-// ── stat card config ───────────────────────────────────────────────────────
-
-interface StatConfig {
-  label: string;
-  colorClass: string;
-  icon: string;
+export type TimelineEvent = {
+  id: string;
+  date: Date;
+  type: 'checkins' | 'messages' | 'sightings' | 'notes' | 'tips';
+  title: string;
+  location?: string;
   description: string;
-}
-
-const STAT_CONFIG: Record<keyof AllData, StatConfig> = {
-  checkins: {
-    label: 'Check-ins',
-    colorClass: 'badge--checkins',
-    icon: '📍',
-    description: 'Location appearances',
-  },
-  messages: {
-    label: 'Messages',
-    colorClass: 'badge--messages',
-    icon: '💬',
-    description: 'Exchanges between people',
-  },
-  sightings: {
-    label: 'Sightings',
-    colorClass: 'badge--sightings',
-    icon: '👁️',
-    description: 'Eyewitness reports',
-  },
-  personalNotes: {
-    label: 'Personal Notes',
-    colorClass: 'badge--notes',
-    icon: '📝',
-    description: 'Private notes & comments',
-  },
-  anonymousTips: {
-    label: 'Anonymous Tips',
-    colorClass: 'badge--tips',
-    icon: '🕵️',
-    description: 'Unverified intelligence',
-  },
+  raw: any;
 };
 
-// ── sub-components ─────────────────────────────────────────────────────────
+type Suspect = { name: string; rawName: string; score: number; lastSeen?: string; locations: string[] };
 
-function StatCard({
-  source,
-  count,
-  latestAt,
-  loading,
-}: {
-  source: keyof AllData;
-  count: number;
-  latestAt: string;
-  loading: boolean;
-}) {
-  const cfg = STAT_CONFIG[source];
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+export function normalizeString(str: string): string {
+  if (!str) return '';
+  return str.trim().toLowerCase()
+    .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's')
+    .replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ç/g, 'c')
+    .replace(/â/g, 'a').replace(/î/g, 'i').replace(/û/g, 'u');
+}
+
+function parseEventDate(dateStr: string): Date {
+  if (!dateStr) return new Date(0);
+  const match = dateStr.trim().match(/^(\d{2})-(\d{2})-(\d{4})\s+(\d{2}):(\d{2})/);
+  if (match) {
+    const [_, d, m, y, h, min] = match;
+    return new Date(`${y}-${m}-${d}T${h}:${min}:00`);
+  }
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(dateStr)) {
+    return new Date(dateStr.replace(' ', 'T'));
+  }
+  return new Date(dateStr);
+}
+
+function fmtDate(d: Date): string {
+  if (!d || isNaN(d.getTime())) return '—';
+  return d.toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
+// ── Data Logic ───────────────────────────────────────────────────────────────
+
+function buildPersonTimeline(data: AllData, personName: string): TimelineEvent[] {
+  const events: TimelineEvent[] = [];
+  const p = normalizeString(personName);
+
+  data.checkins?.forEach(c => {
+    if (normalizeString(c.personName) === p) {
+      const d = parseEventDate(c.time || c.submittedAt);
+      if (!isNaN(d.getTime()))
+        events.push({ id: `chk-${c.id}`, date: d, type: 'checkins', title: `Check-in`, location: c.location, description: c.notes || '', raw: c });
+    }
+  });
+
+  data.messages?.forEach(m => {
+    const isSender = normalizeString(m.senderName) === p;
+    const isReceiver = normalizeString(m.receiverName) === p;
+    if (isSender || isReceiver) {
+      const d = parseEventDate(m.sentAt || m.submittedAt);
+      if (!isNaN(d.getTime()))
+        events.push({ id: `msg-${m.id}`, date: d, type: 'messages', title: isSender ? `→ ${m.receiverName}` : `← ${m.senderName}`, location: m.location, description: m.content || '', raw: m });
+    }
+  });
+
+  data.sightings?.forEach(s => {
+    const isSeen = normalizeString(s.seenPersonName) === p;
+    const isReporter = normalizeString(s.reporterName) === p;
+    const isWith = normalizeString(s.seenWith ?? '') === p;
+    if (isSeen || isReporter || isWith) {
+      const d = parseEventDate(s.time || s.submittedAt);
+      if (!isNaN(d.getTime()))
+        events.push({ id: `sgt-${s.id}`, date: d, type: 'sightings', title: isSeen ? `Spotted` : isReporter ? `Reported sighting` : `Seen with ${s.seenPersonName}`, location: s.location, description: s.description || '', raw: s });
+    }
+  });
+
+  data.personalNotes?.forEach(n => {
+    if (normalizeString(n.authorName) === p) {
+      const d = parseEventDate(n.submittedAt);
+      if (!isNaN(d.getTime()))
+        events.push({ id: `note-${n.id}`, date: d, type: 'notes', title: n.subject || 'Personal Note', location: n.location, description: n.content || '', raw: n });
+    }
+  });
+
+  data.anonymousTips?.forEach(t => {
+    if (normalizeString(t.tipContent).includes(p)) {
+      const d = parseEventDate(t.submittedAt);
+      if (!isNaN(d.getTime()))
+        events.push({ id: `tip-${t.id}`, date: d, type: 'tips', title: `Anonymous Tip`, location: t.location, description: t.tipContent || '', raw: t });
+    }
+  });
+
+  return events.sort((a, b) => a.date.getTime() - b.date.getTime());
+}
+
+function buildSuspects(data: AllData): Suspect[] {
+  const scores = new Map<string, { score: number; rawName: string; dates: Date[]; locations: Set<string> }>();
+
+  const bump = (name: string, pts: number, date?: string, loc?: string) => {
+    if (!name || normalizeString(name) === 'unknown') return;
+    const norm = normalizeString(name);
+    let existingKey = [...scores.keys()].find(k => normalizeString(k) === norm);
+    if (!existingKey) { scores.set(name, { score: 0, rawName: name, dates: [], locations: new Set() }); existingKey = name; }
+    // Prefer Turkish-character version as the canonical key
+    if (/[ğüşıöç]/.test(name) && !existingKey.includes('ğ') && !existingKey.includes('ü')) {
+      const val = scores.get(existingKey)!;
+      scores.delete(existingKey);
+      scores.set(name, val);
+      existingKey = name;
+    }
+    scores.get(existingKey)!.score += pts;
+    if (date) { const d = parseEventDate(date); if (!isNaN(d.getTime())) scores.get(existingKey)!.dates.push(d); }
+    if (loc) scores.get(existingKey)!.locations.add(loc);
+  };
+
+  data.checkins.forEach(c => bump(c.personName, 1, c.time || c.submittedAt, c.location));
+  data.messages.forEach(m => { bump(m.senderName, 1, m.sentAt || m.submittedAt); bump(m.receiverName, 1, m.sentAt || m.submittedAt); });
+  data.sightings.forEach(s => {
+    bump(s.reporterName, 1, s.time || s.submittedAt, s.location);
+    bump(s.seenPersonName, 3, s.time || s.submittedAt, s.location);
+    if (s.seenWith) bump(s.seenWith, 1.5, s.time || s.submittedAt, s.location);
+  });
+  data.personalNotes.forEach(n => bump(n.authorName, 1, n.submittedAt));
+  data.anonymousTips.forEach(t => {
+    [...scores.keys()].forEach(k => {
+      if (normalizeString(t.tipContent).includes(normalizeString(k)))
+        bump(k, t.reliability === 'high' ? 3 : 1, t.submittedAt);
+    });
+  });
+
+  return [...scores.entries()].map(([name, v]) => {
+    const sortedDates = v.dates.sort((a, b) => b.getTime() - a.getTime());
+    const display = name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+    return { name: display, rawName: v.rawName, score: Math.round(v.score), lastSeen: sortedDates[0] ? fmtDate(sortedDates[0]) : undefined, locations: [...v.locations] };
+  }).sort((a, b) => b.score - a.score);
+}
+
+function whereIsPodo(data: AllData): { location: string; confidence: string; reason: string; lastSeen: string } | null {
+  const podoEvents = buildPersonTimeline(data, 'Podo');
+  if (podoEvents.length === 0) return null;
+
+  const withLocation = podoEvents.filter(e => e.location).sort((a, b) => b.date.getTime() - a.date.getTime());
+  if (withLocation.length === 0) return null;
+
+  const latest = withLocation[0];
+  const locFrequency = new Map<string, number>();
+  withLocation.slice(0, 5).forEach(e => {
+    if (e.location) locFrequency.set(e.location, (locFrequency.get(e.location) ?? 0) + 1);
+  });
+  const mostFrequent = [...locFrequency.entries()].sort((a, b) => b[1] - a[1])[0];
+  const isRecent = latest.date.getTime() > Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+  return {
+    location: latest.location!,
+    confidence: isRecent ? 'HIGH' : mostFrequent?.[1] > 1 ? 'MEDIUM' : 'LOW',
+    reason: isRecent ? 'Most recent confirmed location' : `Appears ${mostFrequent?.[1] ?? 1}× in recent records`,
+    lastSeen: fmtDate(latest.date),
+  };
+}
+
+// ── Sub-components ───────────────────────────────────────────────────────────
+
+const TYPE_META: Record<string, { label: string; color: string; icon: string }> = {
+  checkins:  { label: 'Check-in',  color: 'var(--clr-checkins)',  icon: '📍' },
+  messages:  { label: 'Message',   color: 'var(--clr-messages)',  icon: '💬' },
+  sightings: { label: 'Sighting',  color: 'var(--clr-sightings)', icon: '👁' },
+  notes:     { label: 'Note',      color: 'var(--clr-notes)',     icon: '📝' },
+  tips:      { label: 'Tip',       color: 'var(--clr-tips)',      icon: '🕵️' },
+};
+
+function PodoPrediction({ data }: { data: AllData }) {
+  const pred = useMemo(() => whereIsPodo(data), [data]);
+  if (!pred) return null;
+
+  const confColor = pred.confidence === 'HIGH' ? 'var(--clr-success)' : pred.confidence === 'MEDIUM' ? 'var(--clr-accent)' : 'var(--clr-text-muted)';
+
   return (
-    <article className="stat-card card" id={`stat-card-${source}`}>
-      <div className="stat-card__top">
-        <span className={`badge ${cfg.colorClass}`}>
-          {cfg.icon} {cfg.label}
-        </span>
+    <div className="podo-prediction">
+      <div className="podo-prediction__icon">🐾</div>
+      <div className="podo-prediction__body">
+        <span className="podo-prediction__label">Last Known Location</span>
+        <span className="podo-prediction__location">{pred.location}</span>
+        <span className="podo-prediction__detail">{pred.lastSeen} · {pred.reason}</span>
       </div>
-      {loading ? (
-        <div className="skeleton stat-card__skeleton" />
-      ) : (
-        <p className="stat-card__count">{count}</p>
-      )}
-      <p className="stat-card__desc text-sm text-muted">{cfg.description}</p>
-      <p className="stat-card__latest text-xs text-muted">
-        Last entry: <span className="text-secondary">{latestAt}</span>
-      </p>
-    </article>
-  );
-}
-
-function SuspectList({ data, loading }: { data: AllData; loading: boolean }) {
-  const suspects = suspicionScore(data);
-
-  return (
-    <section className="suspects card" aria-labelledby="suspects-heading">
-      <h2 className="suspects__heading" id="suspects-heading">
-        🔍 Most Mentioned
-      </h2>
-      <p className="text-sm text-muted suspects__sub">
-        People appearing most frequently across all records
-      </p>
-
-      {loading ? (
-        <ul className="suspects__list">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <li key={i} className="skeleton suspects__skeleton" />
-          ))}
-        </ul>
-      ) : suspects.length === 0 ? (
-        <p className="text-muted text-sm suspects__empty">No data yet.</p>
-      ) : (
-        <ol className="suspects__list">
-          {suspects.map((s, i) => (
-            <li key={s.name} className="suspects__item">
-              <span className="suspects__rank text-muted text-xs">#{i + 1}</span>
-              <span className="suspects__name">{s.name}</span>
-              <span className={`badge ${i === 0 ? 'badge--tips' : 'badge--sightings'}`}>
-                {s.score} records
-              </span>
-            </li>
-          ))}
-        </ol>
-      )}
-    </section>
-  );
-}
-
-function ErrorBanner({ message, onRetry }: { message: string; onRetry: () => void }) {
-  return (
-    <div className="error-banner" role="alert">
-      <span>⚠️ {message}</span>
-      <button className="btn btn--ghost" onClick={onRetry} id="dashboard-retry-btn">
-        Retry
-      </button>
+      <div className="podo-prediction__confidence" style={{ color: confColor, borderColor: confColor }}>
+        {pred.confidence}
+      </div>
     </div>
   );
 }
 
-// ── main page ──────────────────────────────────────────────────────────────
+function EventCard({ event }: { event: TimelineEvent }) {
+  const meta = TYPE_META[event.type];
+  return (
+    <div className="event-card" style={{ borderLeftColor: meta.color }}>
+      <div className="event-card__header">
+        <span className="event-card__icon">{meta.icon}</span>
+        <span className="event-card__title">{event.title}</span>
+        <span className="event-card__time text-xs text-muted">{fmtDate(event.date)}</span>
+      </div>
+      {event.location && (
+        <div className="event-card__loc text-xs">📍 {event.location}</div>
+      )}
+      {event.description && (
+        <p className="event-card__desc text-sm">{event.description}</p>
+      )}
+    </div>
+  );
+}
 
-export function Dashboard() {
-  const { data, status, error, refetch } = useAllData();
-  const loading = status === 'loading' || status === 'idle';
-
-  const totalRecords =
-    data.checkins.length +
-    data.messages.length +
-    data.sightings.length +
-    data.personalNotes.length +
-    data.anonymousTips.length;
+function SuspectRow({ s, active, onClick }: { s: Suspect; active: boolean; onClick: () => void }) {
+  const maxScore = 30; // rough cap for bar visualization
+  const pct = Math.min(100, (s.score / maxScore) * 100);
+  const isPodo = normalizeString(s.name) === 'podo';
 
   return (
-    <div className="dashboard">
-      {/* ── page header ── */}
-      <header className="dashboard__header">
-        <div>
-          <h1 className="dashboard__title">Investigation Dashboard</h1>
-          <p className="text-secondary text-sm">
-            {loading
-              ? 'Fetching case records…'
-              : status === 'error'
-              ? 'Could not load all records.'
-              : `${totalRecords} records across 5 data sources`}
-          </p>
+    <button className={`suspect-row ${active ? 'suspect-row--active' : ''} ${isPodo ? 'suspect-row--podo' : ''}`} onClick={onClick}>
+      <div className="suspect-row__top">
+        <span className="suspect-row__name">{isPodo ? '🐾 ' : ''}{s.name}</span>
+        <span className="suspect-row__score">{s.score}pt</span>
+      </div>
+      <div className="suspect-row__bar-bg">
+        <div className="suspect-row__bar-fill" style={{ width: `${pct}%`, background: isPodo ? 'var(--clr-accent)' : 'var(--clr-danger)' }} />
+      </div>
+      {s.lastSeen && <span className="suspect-row__last text-xs text-muted">Last: {s.lastSeen}</span>}
+    </button>
+  );
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
+
+export function Dashboard() {
+  const { data, status } = useAllData();
+  const loading = status === 'idle' || status === 'loading';
+
+  const [selectedPerson, setSelectedPerson] = useState<string>('Podo');
+  const [suspectQ, setSuspectQ] = useState('');
+  const [eventQ, setEventQ] = useState('');
+  const [activeTypes, setActiveTypes] = useState<Set<string>>(
+    new Set(['checkins', 'messages', 'sightings', 'notes', 'tips'])
+  );
+
+  const suspects = useMemo(() => buildSuspects(data), [data]);
+
+  const filteredSuspects = useMemo(() => {
+    if (!suspectQ.trim()) return suspects;
+    const q = normalizeString(suspectQ);
+    return suspects.filter(s => normalizeString(s.name).includes(q));
+  }, [suspects, suspectQ]);
+
+  const rawTimeline = useMemo(() => buildPersonTimeline(data, selectedPerson), [data, selectedPerson]);
+
+  const displayTimeline = useMemo(() => {
+    return rawTimeline.filter(e => {
+      if (!activeTypes.has(e.type)) return false;
+      if (!eventQ.trim()) return true;
+      const q = normalizeString(eventQ);
+      return normalizeString(e.title).includes(q) || normalizeString(e.description).includes(q) || normalizeString(e.location || '').includes(q);
+    });
+  }, [rawTimeline, activeTypes, eventQ]);
+
+  const toggleType = (type: string) => {
+    setActiveTypes(prev => {
+      const next = new Set(prev);
+      next.has(type) ? next.delete(type) : next.add(type);
+      return next;
+    });
+  };
+
+  const selectedSuspect = suspects.find(s => normalizeString(s.rawName) === normalizeString(selectedPerson));
+
+  return (
+    <div className="investigation-layout">
+
+      {/* ── LEFT: Suspect Board ── */}
+      <aside className="suspect-panel">
+        <div className="suspect-panel__head">
+          <h2 className="suspect-panel__title">Suspects</h2>
+          <span className="suspect-panel__count text-xs text-muted">{suspects.length} people</span>
         </div>
 
-        <button
-          className="btn btn--ghost"
-          onClick={refetch}
-          disabled={loading}
-          id="dashboard-refetch-btn"
-          aria-label="Refresh all data"
-        >
-          {loading ? '⏳ Loading…' : '↻ Refresh'}
-        </button>
-      </header>
-
-      {/* ── error banner ── */}
-      {status === 'error' && error && (
-        <ErrorBanner message={error} onRetry={refetch} />
-      )}
-
-      {/* ── stat cards ── */}
-      <section className="stats-grid" aria-label="Record counts by source">
-        {(Object.keys(STAT_CONFIG) as (keyof AllData)[]).map(source => (
-          <StatCard
-            key={source}
-            source={source}
-            count={data[source].length}
-            latestAt={latestDate(data[source].map(r => r.submittedAt))}
-            loading={loading}
+        <div className="suspect-panel__search">
+          <input
+            className="input input--small"
+            type="search"
+            placeholder="Filter suspects..."
+            value={suspectQ}
+            onChange={e => setSuspectQ(e.target.value)}
           />
-        ))}
+        </div>
+
+        <div className="suspect-panel__list">
+          {loading
+            ? Array.from({ length: 8 }).map((_, i) => <div key={i} className="skeleton" style={{ height: 56, borderRadius: 8, marginBottom: 8 }} />)
+            : filteredSuspects.map(s => (
+                <SuspectRow
+                  key={s.name}
+                  s={s}
+                  active={normalizeString(s.rawName) === normalizeString(selectedPerson)}
+                  onClick={() => setSelectedPerson(s.rawName)}
+                />
+              ))
+          }
+        </div>
+      </aside>
+
+      {/* ── CENTER: Map + Prediction ── */}
+      <section className="map-panel">
+        <PodoPrediction data={data} />
+
+        <div className="map-panel__map">
+          <MapViewer events={displayTimeline} />
+        </div>
+
+        <div className="map-panel__legend">
+          {Object.entries(TYPE_META).map(([type, meta]) => (
+            <button
+              key={type}
+              className={`legend-chip ${!activeTypes.has(type) ? 'legend-chip--off' : ''}`}
+              style={{ '--chip-color': meta.color } as any}
+              onClick={() => toggleType(type)}
+            >
+              {meta.icon} {meta.label}s
+            </button>
+          ))}
+        </div>
       </section>
 
-      {/* ── suspects panel ── */}
-      <SuspectList data={data} loading={loading} />
+      {/* ── RIGHT: Detail Panel ── */}
+      <aside className="detail-panel">
+        {selectedSuspect ? (
+          <>
+            <div className="detail-panel__head">
+              <div>
+                <h2 className="detail-panel__name">
+                  {normalizeString(selectedSuspect.name) === 'podo' ? '🐾 ' : ''}
+                  {selectedSuspect.name}
+                </h2>
+                <p className="text-xs text-muted" style={{ marginTop: 2 }}>
+                  {displayTimeline.length} events visible · Suspicion: {selectedSuspect.score}pt
+                </p>
+              </div>
+              <div className="detail-panel__score-badge" style={{
+                background: normalizeString(selectedSuspect.name) === 'podo' ? 'var(--clr-accent-dim)' : 'var(--clr-danger-dim)',
+                color: normalizeString(selectedSuspect.name) === 'podo' ? 'var(--clr-accent)' : 'var(--clr-danger)',
+              }}>
+                #{suspects.indexOf(selectedSuspect) + 1}
+              </div>
+            </div>
+
+            {selectedSuspect.locations.length > 0 && (
+              <div className="detail-panel__locations">
+                {selectedSuspect.locations.slice(0, 3).map(loc => (
+                  <span key={loc} className="loc-tag">📍 {loc}</span>
+                ))}
+              </div>
+            )}
+
+            <div className="detail-panel__search">
+              <input
+                className="input input--small"
+                type="search"
+                placeholder="Search events..."
+                value={eventQ}
+                onChange={e => setEventQ(e.target.value)}
+              />
+            </div>
+
+            <div className="detail-panel__timeline">
+              {displayTimeline.length === 0 ? (
+                <div className="detail-panel__empty">
+                  <span>🔍</span>
+                  <p>No events match your filters.</p>
+                </div>
+              ) : (
+                displayTimeline.map(e => <EventCard key={e.id} event={e} />)
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="detail-panel__empty">
+            <span>👈</span>
+            <p>Select a suspect to view their case file.</p>
+          </div>
+        )}
+      </aside>
     </div>
   );
 }

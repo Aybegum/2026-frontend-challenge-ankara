@@ -7,11 +7,11 @@ import { chromium } from 'playwright';
   page.on('console', msg => console.log('BROWSER CONSOLE:', msg.type(), msg.text()));
   page.on('pageerror', err => console.log('CRASH ERROR:', err.message, err.stack));
 
-  console.log('Navigating to http://localhost:5173/records');
-  await page.goto('http://localhost:5173/records');
+  console.log('Navigating to http://localhost:5173/');
+  await page.goto('http://localhost:5173/');
   await page.waitForTimeout(3000); // Wait for fetch
   
-  const locator = page.locator('.case-file');
+  const locator = page.locator('.investigation-spa');
   if (await locator.isVisible()) {
       console.log('Case file element is VISIBLE');
   } else {

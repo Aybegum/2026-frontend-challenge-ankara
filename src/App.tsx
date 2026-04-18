@@ -2,8 +2,6 @@ import { Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Header } from './components/Layout/Header';
 import { Dashboard } from './pages/Dashboard';
-import { Sightings } from './pages/Sightings';
-import { Records } from './pages/Records';
 import './styles/global.css';
 
 function App() {
@@ -17,8 +15,6 @@ function App() {
             <Suspense fallback={<PageSkeleton />}>
               <Routes>
                 <Route path="/" element={<Dashboard />} />
-                <Route path="/sightings" element={<Sightings />} />
-                <Route path="/records" element={<Records />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>

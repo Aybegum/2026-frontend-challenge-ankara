@@ -1,0 +1,15 @@
+feat: complete investigation dashboard redesign
+
+3-panel layout: Suspect Board, Interactive Map, Case File timeline
+Where is Podo prediction bar with HIGH/MEDIUM/LOW confidence
+Suspect Board ranked suspicion scores with score bar and last-seen timestamps
+Case File chronological event stream with description, location, type
+Source type toggles sync map live
+Dual search: suspect filter and event keyword search
+Turkish name normalization merges fragmented identities (Kagan = Kagan)
+Stable jitter: deterministic hash offsets overlapping map markers
+Color-coded Leaflet markers by evidence type, dashed route polyline
+Leaflet dark-mode popup overrides to match design system
+Full-bleed layout, updated Header with ACTIVE INVESTIGATION badge
+Rewrote README with full feature documentation for hackathon judges
+Zero TypeScript errors

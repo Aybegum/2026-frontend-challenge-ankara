@@ -167,10 +167,9 @@ code, pre {
 
 .layout-content {
   flex: 1;
-  padding: var(--space-6);
-  max-width: var(--content-max-w);
-  margin: 0 auto;
+  padding: 0;
   width: 100%;
+  overflow: hidden;
 }
 
 /* ============================================================

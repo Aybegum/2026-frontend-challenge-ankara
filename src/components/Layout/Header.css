@@ -13,9 +13,7 @@
   align-items: center;
   justify-content: space-between;
   height: 100%;
-  padding: 0 var(--space-4);
-  max-width: var(--content-max-w);
-  margin: 0 auto;
+  padding: 0 var(--space-6);
   width: 100%;
   gap: var(--space-4);
 }
@@ -31,6 +29,34 @@
 .header__menu-btn {
   display: none;
 }
+
+/* Center case label */
+.header__case-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+.header__case-badge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--clr-danger);
+  text-transform: uppercase;
+  background: var(--clr-danger-dim);
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(224 82 96 / 0.3);
+}
+
+.header__case-tagline {
+  font-size: 0.65rem;
+  color: var(--clr-text-muted);
+  letter-spacing: 0.03em;
+}
+
 
 .header__logo {
   display: flex;
