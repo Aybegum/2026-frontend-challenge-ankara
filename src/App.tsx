@@ -1,10 +1,8 @@
 import { useState, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Header } from './components/Layout/Header';
+import { Dashboard } from './pages/Dashboard';
 import './styles/global.css';
-
-// Lazy pages (to be built in subsequent commits)
-// import { Dashboard } from './pages/Dashboard';
 
 function App() {
   const [_sidebarOpen, setSidebarOpen] = useState(false);
@@ -18,8 +16,7 @@ function App() {
           <main className="layout-content" id="main-content">
             <Suspense fallback={<PageSkeleton />}>
               <Routes>
-                {/* Placeholder — Dashboard page will replace this in commit 2 */}
-                <Route path="/" element={<ComingSoon />} />
+                <Route path="/" element={<Dashboard />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
@@ -27,33 +24,6 @@ function App() {
         </div>
       </div>
     </BrowserRouter>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Temporary placeholder components                                     */
-/* ------------------------------------------------------------------ */
-
-function ComingSoon() {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '60vh',
-        gap: '16px',
-        textAlign: 'center',
-      }}
-    >
-      <span style={{ fontSize: '3rem' }}>🐾</span>
-      <h1>Missing Podo: The Ankara Case</h1>
-      <p>Investigation dashboard is being assembled…</p>
-      <p className="text-muted text-sm">
-        Foundation commit — types, API service &amp; design system in place.
-      </p>
-    </div>
   );
 }
 
