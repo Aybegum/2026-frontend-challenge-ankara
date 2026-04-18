@@ -57,12 +57,19 @@ async function fetchSubmissions(formId: string): Promise<JotformSubmission[]> {
 // Normalisation helpers
 // ============================================================
 
-function answer(submission: JotformSubmission, ...keys: string[]): string {
-  for (const k of keys) {
-    const ans = submission.answers[k];
+function answer(submission: JotformSubmission, ...labels: string[]): string {
+  const answers = Object.values(submission.answers);
+  for (const label of labels) {
+    const l = label.toLowerCase();
+    const ans = answers.find(a => 
+      (a.name && a.name.toLowerCase() === l) || 
+      (a.text && a.text.toLowerCase().includes(l))
+    );
     if (!ans) continue;
-    if (typeof ans.answer === 'string') return ans.answer.trim();
-    if (Array.isArray(ans.answer)) return ans.answer.join(', ').trim();
+    
+    const val = ans.answer;
+    if (typeof val === 'string') return val.trim();
+    if (Array.isArray(val)) return val.join(', ').trim();
     if (ans.prettyFormat) return ans.prettyFormat.trim();
   }
   return '';
@@ -76,10 +83,10 @@ function normaliseCheckin(s: JotformSubmission): Checkin {
   return {
     id: s.id,
     submittedAt: s.created_at,
-    personName: answer(s, '1', '3', '4', 'q1', 'q3', 'q4') || 'Unknown',
-    location: answer(s, '2', '5', '6', 'q2', 'q5', 'q6') || 'Unknown',
-    time: answer(s, '7', '8', '9', 'q7', 'q8', 'q9') || s.created_at,
-    notes: answer(s, '10', '11', '12', 'q10', 'q11'),
+    personName: answer(s, 'personName') || 'Unknown',
+    location: answer(s, 'location') || 'Unknown',
+    time: answer(s, 'timestamp') || s.created_at,
+    notes: answer(s, 'note'),
     rawAnswers: s.answers,
   };
 }
@@ -88,10 +95,11 @@ function normaliseMessage(s: JotformSubmission): Message {
   return {
     id: s.id,
     submittedAt: s.created_at,
-    senderName: answer(s, '1', '3', 'q1', 'q3') || 'Unknown',
-    receiverName: answer(s, '2', '4', 'q2', 'q4') || 'Unknown',
-    content: answer(s, '5', '6', '7', 'q5', 'q6', 'q7') || '',
-    sentAt: answer(s, '8', '9', 'q8', 'q9') || undefined,
+    senderName: answer(s, 'senderName') || 'Unknown',
+    receiverName: answer(s, 'recipientName') || 'Unknown',
+    content: answer(s, 'text') || '',
+    location: answer(s, 'location') || undefined,
+    sentAt: answer(s, 'timestamp') || undefined,
     rawAnswers: s.answers,
   };
 }
@@ -100,12 +108,12 @@ function normaliseSighting(s: JotformSubmission): Sighting {
   return {
     id: s.id,
     submittedAt: s.created_at,
-    reporterName: answer(s, '1', '3', 'q1', 'q3') || 'Unknown',
-    seenPersonName: answer(s, '2', '4', 'q2', 'q4') || 'Unknown',
-    seenWith: answer(s, '5', '6', 'q5', 'q6') || undefined,
-    location: answer(s, '7', '8', '9', 'q7', 'q8', 'q9') || 'Unknown',
-    time: answer(s, '10', '11', 'q10', 'q11') || undefined,
-    description: answer(s, '12', '13', 'q12', 'q13') || undefined,
+    reporterName: answer(s, 'reporterName') || 'Anonymous', // Reporter isn't in form, so it's anonymous
+    seenPersonName: answer(s, 'personName') || 'Unknown',
+    seenWith: answer(s, 'seenWith') || undefined,
+    location: answer(s, 'location') || 'Unknown',
+    time: answer(s, 'timestamp') || undefined,
+    description: answer(s, 'note') || undefined,
     rawAnswers: s.answers,
   };
 }
@@ -114,23 +122,24 @@ function normalisePersonalNote(s: JotformSubmission): PersonalNote {
   return {
     id: s.id,
     submittedAt: s.created_at,
-    authorName: answer(s, '1', '3', 'q1', 'q3') || 'Unknown',
-    subject: answer(s, '2', '4', 'q2', 'q4') || undefined,
-    content: answer(s, '5', '6', '7', 'q5', 'q6', 'q7') || '',
+    authorName: answer(s, 'authorName') || 'Unknown',
+    subject: answer(s, 'mentionedPeople') || undefined, // we can map mentionedPeople to subject
+    content: answer(s, 'note') || '',
+    location: answer(s, 'location') || undefined,
     rawAnswers: s.answers,
   };
 }
 
 function normaliseAnonymousTip(s: JotformSubmission): AnonymousTip {
-  const rawReliability = answer(s, '2', '3', 'q2', 'q3').toLowerCase();
+  const rawReliability = answer(s, 'confidence').toLowerCase();
   const reliability = (['low', 'medium', 'high'] as const).find(r =>
     rawReliability.includes(r)
   );
   return {
     id: s.id,
     submittedAt: s.created_at,
-    tipContent: answer(s, '1', '4', '5', 'q1', 'q4', 'q5') || '',
-    location: answer(s, '6', '7', 'q6', 'q7') || undefined,
+    tipContent: answer(s, 'tip') || '',
+    location: answer(s, 'location') || undefined,
     reliability: reliability ?? (rawReliability || undefined),
     rawAnswers: s.answers,
   };

@@ -2,9 +2,9 @@ import { NavLink } from 'react-router-dom';
 import './Header.css';
 
 const NAV_LINKS = [
-  { to: '/',          label: 'Dashboard', id: 'nav-dashboard' },
+  { to: '/', label: 'Dashboard', id: 'nav-dashboard' },
   { to: '/sightings', label: 'Sightings', id: 'nav-sightings' },
-  { to: '/records',   label: 'All Records', id: 'nav-records' },
+  { to: '/records', label: 'All Records', id: 'nav-records' },
 ];
 
 export function Header() {
@@ -17,7 +17,7 @@ export function Header() {
             <span className="header__logo-icon" aria-hidden="true">🐾</span>
             <div className="header__logo-text">
               <span className="header__title">Missing Podo</span>
-              <span className="header__subtitle">The Ankara Case</span>
+              <span className="header__subtitle">Case Study</span>
             </div>
           </div>
         </div>

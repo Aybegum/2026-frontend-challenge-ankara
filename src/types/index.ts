@@ -54,6 +54,7 @@ export interface Message {
   senderName: string;
   receiverName: string;
   content: string;
+  location?: string;
   sentAt?: string;
   rawAnswers: Record<string, JotformAnswer>;
 }
@@ -84,6 +85,7 @@ export interface PersonalNote {
   authorName: string;
   subject?: string;
   content: string;
+  location?: string;
   rawAnswers: Record<string, JotformAnswer>;
 }
 
