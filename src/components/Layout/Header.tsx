@@ -1,28 +1,18 @@
+import { NavLink } from 'react-router-dom';
 import './Header.css';
 
-interface HeaderProps {
-  onMenuToggle?: () => void;
-}
+const NAV_LINKS = [
+  { to: '/',          label: 'Dashboard', id: 'nav-dashboard' },
+  { to: '/sightings', label: 'Sightings', id: 'nav-sightings' },
+  { to: '/records',   label: 'All Records', id: 'nav-records' },
+];
 
-export function Header({ onMenuToggle }: HeaderProps) {
+export function Header() {
   return (
     <header className="header glass" role="banner">
       <div className="header__inner">
-        {/* Left — logo + case title */}
+        {/* Brand */}
         <div className="header__brand">
-          <button
-            className="header__menu-btn btn btn--ghost"
-            aria-label="Toggle navigation"
-            onClick={onMenuToggle}
-            id="header-menu-toggle"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <line x1="3" y1="12" x2="21" y2="12" />
-              <line x1="3" y1="18" x2="21" y2="18" />
-            </svg>
-          </button>
-
           <div className="header__logo">
             <span className="header__logo-icon" aria-hidden="true">🐾</span>
             <div className="header__logo-text">
@@ -32,7 +22,24 @@ export function Header({ onMenuToggle }: HeaderProps) {
           </div>
         </div>
 
-        {/* Right — status indicator */}
+        {/* Nav */}
+        <nav className="header__nav" aria-label="Main navigation">
+          {NAV_LINKS.map(({ to, label, id }) => (
+            <NavLink
+              key={to}
+              to={to}
+              id={id}
+              end={to === '/'}
+              className={({ isActive }) =>
+                `header__nav-link${isActive ? ' header__nav-link--active' : ''}`
+              }
+            >
+              {label}
+            </NavLink>
+          ))}
+        </nav>
+
+        {/* Status */}
         <div className="header__actions">
           <div className="header__status" aria-label="Live data connection active">
             <span className="status-dot status-dot--online pulse-ring" />

@@ -1,22 +1,22 @@
-import { useState, Suspense } from 'react';
+import { Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Header } from './components/Layout/Header';
 import { Dashboard } from './pages/Dashboard';
+import { Sightings } from './pages/Sightings';
 import './styles/global.css';
 
 function App() {
-  const [_sidebarOpen, setSidebarOpen] = useState(false);
-
   return (
     <BrowserRouter>
       <div className="layout-root">
-        <Header onMenuToggle={() => setSidebarOpen(prev => !prev)} />
+        <Header />
 
         <div className="layout-main">
           <main className="layout-content" id="main-content">
             <Suspense fallback={<PageSkeleton />}>
               <Routes>
                 <Route path="/" element={<Dashboard />} />
+                <Route path="/sightings" element={<Sightings />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>

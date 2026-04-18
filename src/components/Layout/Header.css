@@ -17,6 +17,7 @@
   max-width: var(--content-max-w);
   margin: 0 auto;
   width: 100%;
+  gap: var(--space-4);
 }
 
 /* Brand / logo */
@@ -24,10 +25,11 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  flex-shrink: 0;
 }
 
 .header__menu-btn {
-  padding: var(--space-2);
+  display: none;
 }
 
 .header__logo {
@@ -61,6 +63,34 @@
   font-weight: 400;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+/* Nav */
+.header__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.header__nav-link {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--clr-text-secondary);
+  text-decoration: none;
+  transition: color var(--transition-fast), background var(--transition-fast);
+  white-space: nowrap;
+}
+
+.header__nav-link:hover {
+  color: var(--clr-text-primary);
+  background: var(--clr-bg-elevated);
+}
+
+.header__nav-link--active {
+  color: var(--clr-accent);
+  background: var(--clr-accent-dim);
 }
 
 /* Actions */
